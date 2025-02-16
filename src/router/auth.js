@@ -1,33 +1,38 @@
 const express = require("express");
-const { validatioSignUpData } = require("../Utils/validation");
+const { validateSignUpData } = require("../Utils/validation");
 const User = require("../models/user");
 const authRoute = express.Router();
 const bcrypt = require("bcrypt");
-// const jwt = require("jsonwebtoken")
 
 
 //creating the signup API
+// creating the signup API
 authRoute.post("/signup", async (req, res) => {
-       try {
-           //validation of data
-           validatioSignUpData(req);
-   
-           const { firstName, lastName, emailId, password } = req.body;
-   
-           //Encrypt the Password
-           const passwordHash = await bcrypt.hash(password, 10);
-   
-           const user = new User({ firstName, lastName, emailId, password: passwordHash });
-   
-           //creating the new instance of user data
-           await user.save();
-           res.status(201).json({ message: "User added successfully." });
-       } catch (err) {
-           res.status(400).json({ error: "Error saving user.", details: err.message });
-   
-       }
-   });
-  
+    try {
+        // Validate sign-up data
+        const validationErrors = validateSignUpData(req);
+        if (validationErrors.length > 0) {
+            return res.status(400).json({ errors: validationErrors });
+        }
+
+        const { firstName, lastName, emailId, password } = req.body;
+
+        // Encrypt the Password
+        const passwordHash = await bcrypt.hash(password, 10);
+
+        // Create new user instance
+        const user = new User({ firstName, lastName, emailId, password: passwordHash });
+
+        // Save the user data to the database
+        await user.save();
+        
+        // Respond with success message
+        res.status(201).json({ message: "User added successfully." });
+    } catch (err) {
+        res.status(500).json({ error: "Error saving user.", details: err.message });
+    }
+});
+
 //creation of login API
 authRoute.post("/login", async (req, res) => {
        try {
@@ -56,6 +61,14 @@ authRoute.post("/login", async (req, res) => {
            res.status(500).send("Error during login: " + err.message);
        }
    });
+
+//creation of logout API
+authRoute.post("/logout" , async(req , res) =>{
+    res.cookie("token" , null ,{
+        expires : new Date(Date.now()),
+    })
+    res.send("logout successfully")
+})
 
 
 module.exports = authRoute;

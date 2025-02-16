@@ -3,12 +3,13 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
+// Mongoose Schema for User
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
         required: true,
         minLength: 4,
-        maxLength :50, 
+        maxLength: 50,
         trim: true,
         validate(value) {
             if (!validator.isAlpha(value)) {
@@ -18,9 +19,12 @@ const userSchema = new mongoose.Schema({
     },
     lastName: {
         type: String,
+        required: true,
+        minLength: 4,
+        maxLength: 50,
         trim: true,
         validate(value) {
-            if (value && !validator.isAlpha(value)) {
+            if (!validator.isAlpha(value)) {
                 throw new Error("Last name must contain only letters.");
             }
         }
@@ -28,12 +32,20 @@ const userSchema = new mongoose.Schema({
     emailId: {
         type: String,
         required: true,
-        unique: true,
+        unique: true,  // Ensure email is unique in the database
         lowercase: true,
         trim: true,
-        validate(value) {
-            if (!validator.isEmail(value)) {
-                throw new Error("Enter a valid email ID: " + value);
+        validate: {
+            validator(value) {
+                return validator.isEmail(value); // Ensures it's a valid email format
+            },
+            message: "Enter a valid email ID."  // Custom error message
+        },
+        // Check if email already exists in the database
+        async validateEmail(value) {
+            const user = await mongoose.models.User.findOne({ emailId: value });
+            if (user) {
+                throw new Error("Email ID is already in use.");
             }
         }
     },
@@ -51,15 +63,15 @@ const userSchema = new mongoose.Schema({
         type: Number,
         min: 18,
         validate(value) {
-            if (!Number.isInteger(value)) {
-                throw new Error("Age must be a valid number.");
+            if (!Number.isInteger(value) || value < 18) {
+                throw new Error("Age must be a valid number and at least 18.");
             }
         }
     },
     gender: {
         type: String,
         validate(value) {
-            if (!["male", "female", "other"].includes(value.toLowerCase())) {
+            if (value && !["male", "female", "other"].includes(value.toLowerCase())) {
                 throw new Error("Gender data is not valid. Choose 'male', 'female', or 'other'.");
             }
         }
@@ -68,7 +80,7 @@ const userSchema = new mongoose.Schema({
         type: String,
         default: "https://tse3.mm.bing.net/th?id=OIP.w0TcjC4y9CxTrY3sitYa_AAAAA&pid=Api&P=0&h=180",
         validate(value) {
-            if (!validator.isURL(value)) {
+            if (value && !validator.isURL(value)) {
                 throw new Error("Invalid photo URL.");
             }
         }
@@ -89,30 +101,22 @@ const userSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-userSchema.methods.getJWT = async function (){
+// JWT Token Method
+userSchema.methods.getJWT = async function () {
     const user = this;
-    
-    const token =  await jwt.sign({_id : user.id} , "DEV@TINDER$790" , {
-        expiresIn : "7d"})
-         return token;
+    const token = await jwt.sign({ _id: user.id }, "DEV@TINDER$790", {
+        expiresIn: "7d"
+    });
+    return token;
+};
 
-}
-
+// Password Validation Method
 userSchema.methods.validatePassword = async function (passwordInputByUser) {
-    const user  = this;
+    const user = this;
     const passwordHash = user.password;
-
-
-    const isPasswordValid = await bcrypt.compare(
-        passwordInputByUser ,
-        passwordHash
-    )
-
+    const isPasswordValid = await bcrypt.compare(passwordInputByUser, passwordHash);
     return isPasswordValid;
-}
-
-
-
+};
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;
