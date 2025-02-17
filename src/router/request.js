@@ -10,17 +10,24 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
     const toUserId = req.params.toUserId;
     const status = req.params.status;
 
-    if (!["ignored", "accepted", "rejected", "interested"].includes(status)) {
+    if (![ "rejected", "interested"].includes(status)) {
       return res.status(400).json({ message: "Invalid status provided." });
     }
 
     const existingRequest = await ConnectionRequest.findOne({
-      fromUserId,
-      toUserId,
+     $or : [
+      {fromUserId ,toUserId},
+      {fromUserId : toUserId, toUserId :fromUserId }
+     ]
     });
 
     if (existingRequest) {
       return res.status(400).json({ message: "Connection request already exists." });
+    }
+
+    const toUser = await User.findById(toUserId);
+    if(!toUser){
+      return res.status(404).json({message: "user not Found "})
     }
 
     const newConnectionRequest = new ConnectionRequest({
@@ -32,10 +39,11 @@ requestRouter.post("/request/send/:status/:toUserId", userAuth, async (req, res)
     const data = await newConnectionRequest.save();
 
     // Fetch the sender user's information for the response
-    const fromUser = await User.findById(fromUserId).select("firstName");
+    const fromUserName = await User.findById(fromUserId).select("firstName");
+    const toUserName = await User.findById(toUserId).select("firstName");
 
     res.status(201).json({
-      message: `${fromUser.firstName} sent the connection request successfully.`,
+      message: `${fromUserName.firstName} is ${status} to ${toUserName.firstName}`,
       data,
     });
   } catch (err) {
