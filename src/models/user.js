@@ -3,7 +3,6 @@ const validator = require("validator");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 
-// Mongoose Schema for User
 const userSchema = new mongoose.Schema({
     firstName: {
         type: String,
@@ -32,22 +31,15 @@ const userSchema = new mongoose.Schema({
     emailId: {
         type: String,
         required: true,
-        unique: true,  // Ensure email is unique in the database
+        unique: true,
         lowercase: true,
         trim: true,
         validate: {
             validator(value) {
-                return validator.isEmail(value); // Ensures it's a valid email format
+                return validator.isEmail(value);
             },
-            message: "Enter a valid email ID."  // Custom error message
+            message: "Enter a valid email ID."
         },
-        // Check if email already exists in the database
-        async validateEmail(value) {
-            const user = await mongoose.models.User.findOne({ emailId: value });
-            if (user) {
-                throw new Error("Email ID is already in use.");
-            }
-        }
     },
     password: {
         type: String,
@@ -101,9 +93,15 @@ const userSchema = new mongoose.Schema({
     timestamps: true,
 });
 
-// userSchema.index({firstName :1 , lastName :1})
+userSchema.pre('save', async function(next) {
+    const user = this;
+    const existingUser = await mongoose.models.User.findOne({ emailId: user.emailId });
+    if (existingUser) {
+        throw new Error('Email ID is already in use.');
+    }
+    next();
+});
 
-// JWT Token Method
 userSchema.methods.getJWT = async function () {
     const user = this;
     const token = await jwt.sign({ _id: user.id }, "DEV@TINDER$790", {
@@ -112,7 +110,6 @@ userSchema.methods.getJWT = async function () {
     return token;
 };
 
-// Password Validation Method
 userSchema.methods.validatePassword = async function (passwordInputByUser) {
     const user = this;
     const passwordHash = user.password;
