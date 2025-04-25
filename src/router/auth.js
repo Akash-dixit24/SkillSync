@@ -13,9 +13,9 @@ authRoute.post("/signup", async (req, res) => {
         if (validationErrors.length > 0) {
             return res.status(400).json({ errors: validationErrors });
         }
-        const { firstName, lastName, emailId, password } = req.body;
+        const { firstName,age,gender, lastName,skills, about , emailId, password } = req.body;
         const passwordHash = await bcrypt.hash(password, 10);
-        const user = new User({ firstName, lastName, emailId, password: passwordHash });
+        const user = new User({ firstName, lastName,skills, age,about, gender, emailId, password: passwordHash });
         await user.save();
 
         res.status(201).json({ message: "User added successfully." });
@@ -38,7 +38,7 @@ authRoute.post("/login", async (req, res) => {
                    const token = await user.getJWT();
 
                    res.cookie("token" ,token)
-                   res.status(200).send("User login successful.");
+                   res.status(200).json({message : "Login Sucessfully", user});
                   
                } else {
                    return res.status(401).send("Invalid email or password.");

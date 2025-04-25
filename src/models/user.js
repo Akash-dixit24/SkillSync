@@ -70,7 +70,16 @@ const userSchema = new mongoose.Schema({
     },
     photo: {
         type: String,
-        default: "https://tse3.mm.bing.net/th?id=OIP.w0TcjC4y9CxTrY3sitYa_AAAAA&pid=Api&P=0&h=180",
+        default: function() {
+            // Check gender and assign photo accordingly
+            if (this.gender === 'female') {
+                return "https://img.freepik.com/premium-photo/female-developer-background_665280-9650.jpg?w=900"; 
+            } else if (this.gender === 'male') {
+                return "https://img.freepik.com/premium-photo/happy-3d-cartoon-man-using-laptop-siting-transparent-white-background_973886-152.jpg?w=900"; 
+            } else {
+                return "https://example.com/default-photo.jpg"; 
+            }
+        },
         validate(value) {
             if (value && !validator.isURL(value)) {
                 throw new Error("Invalid photo URL.");
@@ -82,7 +91,8 @@ const userSchema = new mongoose.Schema({
         default: "The default description of user"
     },
     skills: {
-        type: [String],
+        type:  [],
+        default:["c++" , "java" , "python"],
         validate(value) {
             if (!Array.isArray(value)) {
                 throw new Error("Skills should be an array of strings.");
@@ -95,10 +105,15 @@ const userSchema = new mongoose.Schema({
 
 userSchema.pre('save', async function(next) {
     const user = this;
-    const existingUser = await mongoose.models.User.findOne({ emailId: user.emailId });
-    if (existingUser) {
-        throw new Error('Email ID is already in use.');
+
+    // Only check for duplicates if the email is being changed
+    if (user.isModified('emailId')) {
+        const existingUser = await mongoose.models.User.findOne({ emailId: user.emailId });
+        if (existingUser) {
+            throw new Error('Email ID is already in use.');
+        }
     }
+
     next();
 });
 
@@ -119,3 +134,6 @@ userSchema.methods.validatePassword = async function (passwordInputByUser) {
 
 const User = mongoose.model("User", userSchema);
 module.exports = User;
+
+
+

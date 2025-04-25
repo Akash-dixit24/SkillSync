@@ -2,7 +2,7 @@ const validator = require("validator");
 
 // Improved validation for sign-up data
 const validateSignUpData = (req) => {
-    const { firstName, lastName, emailId, password, age } = req.body;
+    const { firstName, lastName, emailId, password, age  } = req.body;
     const errors = [];
 
     // Validate first and last names
@@ -44,19 +44,18 @@ const validateProfileEditData = (req) => {
         "about",
         "skills",
         "photo",
-        "age"
+        "age",
+        "about"
     ];
 
     const errors = [];
     const requestFields = Object.keys(req.body);
 
-    // Check if all fields in the request are allowed for profile editing
     requestFields.forEach((field) => {
         if (!allowEditFields.includes(field)) {
             errors.push(`Field '${field}' is not allowed for editing.`);
         }
 
-        // Additional checks for specific fields
         if (field === 'firstName' || field === 'lastName') {
             if (req.body[field] && !validator.isAlpha(req.body[field])) {
                 errors.push(`${field.charAt(0).toUpperCase() + field.slice(1)} must contain only letters.`);
@@ -74,10 +73,15 @@ const validateProfileEditData = (req) => {
         if (field === 'photo' && req.body[field] && !validator.isURL(req.body[field])) {
             errors.push("Invalid photo URL.");
         }
+
+        if (field === 'gender' && req.body[field] && !["male", "female", "other"].includes(req.body[field].toLowerCase())) {
+            errors.push("Gender must be 'male', 'female', or 'other'.");
+        }
     });
 
     return errors;
 };
+
 
 module.exports = {
     validateSignUpData,

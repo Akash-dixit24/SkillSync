@@ -17,16 +17,23 @@ profileRoute.get("/profile/view", userAuth, async (req, res) => {
 
 profileRoute.patch("/profile/update", userAuth, async (req, res) => {
     try {
-        if (!validateProfileEditData(req)) {
-            throw new Error("Invalid edit request");
+        // Validate the incoming data
+        const errors = validateProfileEditData(req);
+        if (errors.length > 0) {
+            throw new Error(errors.join(', '));
         }
 
         const loggedInUser = req.user;
-        if (!loggedInUser) {
-            return res.status(404).json({ message: "User not found." });
+
+        // Check if the emailId is being updated and if so, validate it
+        if (req.body.emailId && req.body.emailId !== loggedInUser.emailId) {
+            const existingUser = await mongoose.models.User.findOne({ emailId: req.body.emailId });
+            if (existingUser) {
+                throw new Error('Email ID is already in use.');
+            }
         }
 
-        // Update user profile fields based on request body
+        // Update the fields
         Object.keys(req.body).forEach((key) => {
             loggedInUser[key] = req.body[key];
         });
@@ -34,13 +41,17 @@ profileRoute.patch("/profile/update", userAuth, async (req, res) => {
         // Save the updated user
         await loggedInUser.save();
 
-        res.status(200).json({
-            message: `${loggedInUser.firstName}, your profile was updated successfully.`,
-            user: loggedInUser, // Send updated user data back
+        res.json({
+            message: `${loggedInUser.firstName}, your profile is updated`,
+            data: loggedInUser,
         });
+
     } catch (err) {
-        res.status(500).json({ message: "Error while updating profile", error: err.message });
-        console.error(err); // Log the error for debugging
+        res.status(500).json({
+            message: "Error while updating profile",
+            error: err.message,
+        });
+        console.error(err); 
     }
 });
 
